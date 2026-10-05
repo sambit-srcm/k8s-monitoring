@@ -1,0 +1,19 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "bullmq": "^6.3.11",
+    "express": "^5.2.1",
+    "prom-client": "^15.1.3"
+  }
+}
