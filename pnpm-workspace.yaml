@@ -1,7 +1,7 @@
 packages:
-- "shared"
-- "api"
-- "worker"
+  - "shared"
+  - "api"
+  - "worker"
 allowBuilds:
   esbuild: false
   msgpackr-extract: false

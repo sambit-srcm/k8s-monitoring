@@ -8,11 +8,18 @@
     "build": "pnpm -r build",
     "test": "pnpm --filter @app/shared test",
     "dev:api": "pnpm --filter api dev",
-    "dev:worker": "pnpm --filter worker dev"
+    "dev:worker": "pnpm --filter worker dev",
+    "prepare": "husky || true",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r build"
   },
   "packageManager": "pnpm@12.9.1+sha512.06b055fff5cd20dc12781de173ced3310ce0951bf2ec620211a16045d5444d5c93a663210764ef29a653a610459ba0368f0e74f84d80c54723cf95aae7bc0d6d",
   "devDependencies": {
     "@types/node": "^26.6.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.9",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
