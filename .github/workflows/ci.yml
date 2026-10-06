@@ -2,9 +2,9 @@ name: K8S CI
 
 on:
   push:
-    branches: [main,development]
+    branches: [main, development]
   pull_request:
-    branches: [main,development]
+    branches: [main, development]
 
 permissions:
   contents: read
@@ -28,9 +28,9 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
-
-      - name: Test
-        run: pnpm test
+      # Disabled until we have tests in place
+      # - name: Test
+      #   run: pnpm test
 
       - name: Build
         run: pnpm build
