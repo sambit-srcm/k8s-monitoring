@@ -3,5 +3,6 @@ packages:
   - "api"
   - "worker"
 allowBuilds:
+  bcrypt: false
   esbuild: false
   msgpackr-extract: false
