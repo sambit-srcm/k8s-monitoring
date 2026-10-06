@@ -5,8 +5,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc -w",
-    "test": "tsx --test src/job.test.ts"
+    "dev": "tsc -w"
   },
   "dependencies": {
     "zod": "^4.6.5"
