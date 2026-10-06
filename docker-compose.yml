@@ -1,6 +1,37 @@
 services:
   redis:
     image: redis:7
-    container_name: k8s_redis
     ports:
       - "6379:6379"
+
+  api:
+    build:
+      context: .
+      args:
+        SERVICE: api
+    image: queue-api:latest
+    environment:
+      REDIS_HOST: redis
+      PORT: "3000"
+      REDIS_PORT: "6379"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: .
+      args:
+        SERVICE: worker
+    image: queue-worker:latest
+    environment:
+      REDIS_HOST: redis
+      METRICS_PORT: "9100"
+      REDIS_PORT: "6379"
+    ports:
+      - "9100:9100"
+    cpus: 0.5
+    mem_limit: 512m
+    depends_on:
+      - redis
