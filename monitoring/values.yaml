@@ -6,6 +6,21 @@ prometheus:
     resources:
       requests: { cpu: 200m, memory: 400Mi }
 
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: admin
+  defaultDashboardsEnabled: true
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 3000
+    nodePort: 30080
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+
 alertmanager:
   enabled: false
 
