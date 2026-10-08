@@ -1,0 +1,90 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stats-dashboard
+  namespace: queue-system
+  labels:
+    grafana_dashboard: "1"
+data:
+  stats.json: |
+    {
+      "uid": "queue-stats",
+      "title": "Queue stats",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "10s",
+      "time": { "from": "now-30m", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Queue length",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "expr": "queue_length", "legendFormat": "waiting" }]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Submitted vs completed",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "rate(total_jobs_submitted[1m])",
+              "legendFormat": "submitted"
+            },
+            {
+              "expr": "rate(total_jobs_completed[1m])",
+              "legendFormat": "completed"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Average job processing time",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "avg_job_processing_seconds",
+              "legendFormat": "avg seconds"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Active jobs",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "expr": "active_jobs", "legendFormat": "active" }]
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "HPA replicas",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"queue-system\"}",
+              "legendFormat": "current"
+            },
+            {
+              "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"queue-system\"}",
+              "legendFormat": "desired"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Total failed jobs",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [{ "expr": "total_jobs_failed", "legendFormat": "failed" }]
+        }
+      ]
+    }

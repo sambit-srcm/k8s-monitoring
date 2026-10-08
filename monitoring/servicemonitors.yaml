@@ -14,3 +14,20 @@ spec:
     - port: metrics
       path: /metrics
       interval: 15s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: stats
+  namespace: queue-system
+spec:
+  selector:
+    matchLabels:
+      app: stats
+  namespaceSelector:
+    matchNames:
+      - queue-system
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
