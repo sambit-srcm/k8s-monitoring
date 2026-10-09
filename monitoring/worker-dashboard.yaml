@@ -1,3 +1,4 @@
+# Keep in sync with monitoring/dashboards/worker-dashboard.json
 apiVersion: v1
 kind: ConfigMap
 metadata:
