@@ -43,7 +43,11 @@ const submitHandler = async (req: Request, res: Response) => {
     megabytes: parsed.data.megabytes,
   };
 
-  const job = await queue.add(data.type, data);
+  // Keep recent jobs so GET /status/:id still works, then drop them so Redis stays bounded.
+  const job = await queue.add(data.type, data, {
+    removeOnComplete: { age: 3600, count: 1000 },
+    removeOnFail: { age: 86400, count: 1000 },
+  });
   await redis.incr(STATS_KEYS.submitted);
   res.status(202).json({ id: job.id, type: data.type });
 };
