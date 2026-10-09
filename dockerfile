@@ -8,11 +8,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY shared/package.json shared/
 COPY api/package.json api/
 COPY worker/package.json worker/
+COPY stats/package.json stats/
 RUN pnpm install --frozen-lockfile
 
 COPY shared shared
 COPY api api
 COPY worker worker
+COPY stats stats
 RUN pnpm -r build
 
 # Self-contained folder: just this service's prod deps + built shared

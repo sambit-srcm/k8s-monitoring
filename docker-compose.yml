@@ -35,3 +35,18 @@ services:
     mem_limit: 512m
     depends_on:
       - redis
+
+  stats:
+    build:
+      context: .
+      args:
+        SERVICE: stats
+    image: queue-stats:latest
+    environment:
+      REDIS_HOST: redis
+      PORT: "3100"
+      REDIS_PORT: "6379"
+    ports:
+      - "3100:3100"
+    depends_on:
+      - redis

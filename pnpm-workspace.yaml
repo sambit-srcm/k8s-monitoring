@@ -2,6 +2,7 @@ packages:
   - "shared"
   - "api"
   - "worker"
+  - "stats"
 allowBuilds:
   bcrypt: false
   esbuild: false
