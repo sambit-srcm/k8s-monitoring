@@ -8,8 +8,8 @@ spec:
     matchLabels:
       app: worker
   namespaceSelector:
-      matchNames:
-        - queue-system
+    matchNames:
+      - queue-system
   endpoints:
     - port: metrics
       path: /metrics

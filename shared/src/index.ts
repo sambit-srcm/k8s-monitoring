@@ -2,10 +2,13 @@ import { z } from "zod";
 
 export const QUEUE_NAME = "jobs";
 
-export const redisConnection = () => ({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-});
+export const redisConnection = () => {
+  const parsedPort = Number(process.env.REDIS_PORT ?? 6379);
+  return {
+    host: process.env.REDIS_HOST ?? "localhost",
+    port: Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 6379,
+  };
+};
 
 // Redis counters that Service C (stats) will read
 export const STATS_KEYS = {

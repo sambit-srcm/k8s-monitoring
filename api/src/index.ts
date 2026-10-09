@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Request, type Response } from "express";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
 import {
@@ -32,7 +32,7 @@ function pickJobType(): JobType {
 const app = express();
 app.use(express.json());
 
-app.post("/submit", async (req, res) => {
+const submitHandler = async (req: Request, res: Response) => {
   const parsed = JobPayloadSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.issues });
@@ -43,10 +43,16 @@ app.post("/submit", async (req, res) => {
     megabytes: parsed.data.megabytes,
   };
 
-  const job = await queue.add(data.type, data);
+  // Keep recent jobs so GET /status/:id still works, then drop them so Redis stays bounded.
+  const job = await queue.add(data.type, data, {
+    removeOnComplete: { age: 3600, count: 1000 },
+    removeOnFail: { age: 86400, count: 1000 },
+  });
   await redis.incr(STATS_KEYS.submitted);
   res.status(202).json({ id: job.id, type: data.type });
-});
+};
+app.post("/submit", submitHandler);
+app.get("/submit", submitHandler);
 
 app.get("/status/:id", async (req, res) => {
   const job = await queue.getJob(req.params.id);

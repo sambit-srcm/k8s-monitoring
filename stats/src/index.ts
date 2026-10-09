@@ -1,10 +1,4 @@
-import {
-  QUEUE_NAME,
-  STATS_KEYS,
-  redisConnection,
-  type JobData,
-  type JobResult,
-} from "@app/shared";
+import { QUEUE_NAME, STATS_KEYS, redisConnection, type JobData, type JobResult } from "@app/shared";
 import { Queue } from "bullmq";
 import express from "express";
 import { Redis } from "ioredis";
@@ -43,12 +37,7 @@ type Snapshot = {
 
 async function readSnapshot(): Promise<Snapshot> {
   const [values, counts] = await Promise.all([
-    redis.mget(
-      STATS_KEYS.submitted,
-      STATS_KEYS.completed,
-      STATS_KEYS.failed,
-      STATS_KEYS.timeSum,
-    ),
+    redis.mget(STATS_KEYS.submitted, STATS_KEYS.completed, STATS_KEYS.failed, STATS_KEYS.timeSum),
     queue.getJobCounts("waiting", "active"),
   ]);
   const submitted = toNumber(values[0]);
@@ -72,7 +61,7 @@ function toNumber(value: string | null): number {
 
 const app = express();
 
-app.get("/healthz", (_req, res) => {
+app.get("/health", (_req, res) => {
   res.send("ok");
 });
 

@@ -1,3 +1,4 @@
+# Keep in sync with monitoring/dashboards/worker-dashboard.json
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -15,6 +16,7 @@ data:
       "refresh": "10s",
       "panels": [
         {
+          "id": 1,
           "type": "timeseries",
           "title": "Jobs completed",
           "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
@@ -27,6 +29,7 @@ data:
           ]
         },
         {
+          "id": 2,
           "type": "timeseries",
           "title": "Job errors",
           "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
@@ -39,6 +42,7 @@ data:
           ]
         },
         {
+          "id": 3,
           "type": "timeseries",
           "title": "Job duration p95",
           "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
@@ -47,6 +51,49 @@ data:
             {
               "expr": "histogram_quantile(0.95, sum by (le, type) (rate(job_processing_time_seconds_bucket[1m])))",
               "legendFormat": "{{type}}"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Per-pod CPU",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"queue-system\",pod=~\"worker-.*\",container!=\"\"}[1m]))",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "Per-pod memory",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"queue-system\",pod=~\"worker-.*\",container!=\"\"})",
+              "legendFormat": "{{pod}}"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Worker replicas",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"queue-system\",horizontalpodautoscaler=\"worker\"}",
+              "legendFormat": "current"
+            },
+            {
+              "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"queue-system\",horizontalpodautoscaler=\"worker\"}",
+              "legendFormat": "desired"
             }
           ]
         }
