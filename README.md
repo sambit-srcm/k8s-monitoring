@@ -13,10 +13,6 @@ client -- :80 --> Ingress --> api (ClusterIP)
                               |
                               v
                            stats (ClusterIP, internal)
-
-worker /metrics ----> Prometheus ----> Grafana :30080
-stats  /metrics ----/          |
-                               +-- kube-state-metrics (HPA replica counts)
 ```
 
 ## Prerequisites
@@ -121,20 +117,4 @@ kind has no cloud load balancer. `extraPortMappings` in `kind-config.yaml` publi
 
 ## Results and observations
 
-<!-- TODO(me): paste Grafana screenshot of the queue backlog during the stress test -->
-
-<!-- TODO(me): paste Grafana screenshot showing 10 worker pods -->
-
-<!-- TODO(me): paste Grafana screenshot after the HPA scales back down -->
-
-<!-- TODO(me): paste `kubectl describe hpa worker -n queue-system` events -->
-
-<!-- TODO(me): record ab requests per second, failed requests, and the peak worker replica count -->
-
-## Troubleshooting
-
-- A ServiceMonitor is ignored when its namespace selector does not match. `monitoring/values.yaml` sets `serviceMonitorSelectorNilUsesHelmValues: false` so the chart does not require the Helm release label. The monitors still select `namespaceSelector.matchNames: [queue-system]`. An empty `namespaceSelector: {}` would scrape every namespace instead.
-- HPA targets stay `<unknown>` until metrics-server is ready. Run `scripts/install-metrics-server.sh` and check `kubectl top nodes`.
-- `ab` prints `Send request failed` when it resolves `localhost` to IPv6. Call `http://127.0.0.1/submit`.
-- Helm install of kube-prometheus-stack fails when the Docker VM is short on memory. Give Colima at least 5 GiB.
-- A rebuilt image does not show up until `kind load docker-image` and a rollout restart of the Deployment.
+![alt text](<results/Screenshot 2026-10-09 at 18.42.27.png>) ![alt text](<results/Screenshot 2026-10-09 at 18.42.49.png>) ![alt text](<results/Screenshot 2026-10-09 at 19.03.38.png>) ![alt text](<results/Screenshot 2026-10-09 at 19.04.25.png>) ![alt text](<results/Screenshot 2026-10-09 at 19.04.40.png>)
