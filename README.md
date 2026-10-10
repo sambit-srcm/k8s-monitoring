@@ -117,4 +117,69 @@ kind has no cloud load balancer. `extraPortMappings` in `kind-config.yaml` publi
 
 ## Results and observations
 
-![alt text](<results/Screenshot 2026-10-09 at 18.42.27.png>) ![alt text](<results/Screenshot 2026-10-09 at 18.42.49.png>) ![alt text](<results/Screenshot 2026-10-09 at 19.03.38.png>) ![alt text](<results/Screenshot 2026-10-09 at 19.04.25.png>) ![alt text](<results/Screenshot 2026-10-09 at 19.04.40.png>)
+Raw output is in [results/results-ab.txt](results/results-ab.txt), [results/results-hpa-describe.txt](results/results-hpa-describe.txt), and [results/results-hpa-watch.txt](results/results-hpa-watch.txt).
+
+### Jobs completed during the load
+
+![Jobs completed rising for bcrypt, memory, primes, and sort, with no job errors](results/01-jobs-completed-during-load.png)
+
+Jobs completed starts rising just after 18:40. The job-errors panel has no series.
+
+### HPA watch while replicas climb
+
+![kubectl get hpa -w showing worker replicas moving from 2 through 4 and 8 to 10](results/02-hpa-scale-up-watch.png)
+
+The watch lists CPU above the 70% target and the replica column moving 2, 4, 8, then 10.
+
+### Jobs completed after the load window
+
+![Jobs completed falling back to zero after a peak, still with no job errors](results/03-jobs-drain-after-load.png)
+
+The completion rate peaks and then returns to zero in the window ending 18:47. Job errors stay empty.
+
+### HPA rescale events
+
+![HPA events scaling the worker to 4, 8, and 10, then back through 8, 6, and 4 to 2](results/04-hpa-rescale-events.png)
+
+`SuccessfulRescale` events show 2 to 4, then 8, then 10 while CPU is above target, then 8, 6, 4, and 2 with "All metrics below target".
+
+### Redis counters after the run
+
+![redis-cli mget of submitted, completed, and failed, each printing 5000, 5000, and 0](results/05-redis-counters.png)
+
+`MGET stats:submitted stats:completed stats:failed` printed 5000, 5000, and 0.
+
+### `ab` results
+
+From [results/results-ab.txt](results/results-ab.txt):
+
+| Metric                | Value    |
+| --------------------- | -------- |
+| Complete requests     | 5000     |
+| Requests per second   | 792.01   |
+| Mean time per request | 252.5 ms |
+| p50                   | 105 ms   |
+| p95                   | 307 ms   |
+| p99                   | 5282 ms  |
+| Max                   | 6189 ms  |
+| Time taken            | 6.313 s  |
+
+`Failed requests: 4998` are all `Length` failures. `ab` counts a response as failed when its body length differs from the first response, and `/submit` returns a varying body (`{id, type}`). Connect, receive, and exception counts are 0. There were no non-2xx responses.
+
+<!-- TODO(me): confirm the non-2xx claim from the access log if you want a second source besides the ab Length breakdown -->
+
+### HPA summary
+
+[results/results-hpa-describe.txt](results/results-hpa-describe.txt) events show the worker going 2 → 4 → 8 → 10, then 8 → 6 → 4 → 2 on scale-down.
+
+A `FailedGetScale ... Unauthorized` line appears 13 times in those events.
+
+<!-- TODO(me): explain FailedGetScale Unauthorized events -->
+
+### Observations
+
+- The jobs-completed panel returns to zero after the load window, which matches the backlog draining once submissions stop. The Redis counters above show submitted and completed both at 5000 and failed at 0.
+- API latency has a long tail: p98 is 2598 ms (about 2.6 s) and p99 is 5282 ms (about 5.3 s) in the `ab` report. The API Deployment is set to a single replica.
+- Linked files: [results/results-ab.txt](results/results-ab.txt), [results/results-hpa-describe.txt](results/results-hpa-describe.txt), [results/results-hpa-watch.txt](results/results-hpa-watch.txt).
+
+<!-- TODO(me): confirm the running API replica count during this run, and whether the queue_length panel also showed the backlog drain -->
