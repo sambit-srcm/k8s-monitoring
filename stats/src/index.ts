@@ -1,5 +1,12 @@
-/* eslint-disable no-console -- console calls move to the shared logger in the next change */
-import { QUEUE_NAME, STATS_KEYS, redisConnection, type JobData, type JobResult } from "@app/shared";
+import {
+  QUEUE_NAME,
+  STATS_KEYS,
+  createLogger,
+  redisConnection,
+  type JobData,
+  type JobResult,
+} from "@app/shared";
+
 import { Queue } from "bullmq";
 import express from "express";
 import { Redis } from "ioredis";
@@ -13,6 +20,8 @@ import {
   totalJobsSubmitted,
 } from "./metrics";
 
+const log = createLogger("stats");
+
 const PORT = Number(process.env.PORT ?? 3100);
 
 const connection = {
@@ -22,10 +31,10 @@ const connection = {
 };
 
 const queue = new Queue<JobData, JobResult>(QUEUE_NAME, { connection });
-queue.on("error", (err) => console.error("queue error", err.message));
+queue.on("error", (err) => log.error({ err: err.message }, "queue error"));
 
 const redis = new Redis(connection);
-redis.on("error", (err) => console.error("redis error", err.message));
+redis.on("error", (err) => log.error({ err: err.message }, "redis error"));
 
 type Snapshot = {
   submitted: number;
@@ -71,7 +80,7 @@ app.get("/stats", async (_req, res) => {
     res.json(await readSnapshot());
   } catch (err) {
     const message = err instanceof Error ? err.message : "redis unavailable";
-    console.error("stats read failed", message);
+    log.error({ err: message }, "stats read failed");
     res.status(503).json({ error: "redis_unavailable" });
   }
 });
@@ -89,12 +98,12 @@ app.get("/metrics", async (_req, res) => {
     res.send(await registry.metrics());
   } catch (err) {
     const message = err instanceof Error ? err.message : "redis unavailable";
-    console.error("metrics read failed", message);
+    log.error({ err: message }, "metrics read failed");
     res.status(503).end();
   }
 });
 
-const server = app.listen(PORT, () => console.log(`stats on :${PORT}`));
+const server = app.listen(PORT, () => log.info(`stats on :${PORT}`));
 
 process.on("SIGTERM", async () => {
   await new Promise<void>((resolve) => {
@@ -102,7 +111,7 @@ process.on("SIGTERM", async () => {
   });
   await queue.close().catch((err: unknown) => {
     const message = err instanceof Error ? err.message : "queue close failed";
-    console.error("queue close failed", message);
+    log.error({ err: message }, "queue close failed");
   });
   redis.disconnect();
   process.exit(0);

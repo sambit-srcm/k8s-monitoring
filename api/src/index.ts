@@ -1,10 +1,10 @@
-/* eslint-disable no-console -- console calls move to the shared logger in the next change */
 import express, { type Request, type Response } from "express";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
 import {
   QUEUE_NAME,
   STATS_KEYS,
+  createLogger,
   redisConnection,
   JobPayloadSchema,
   type JobData,
@@ -12,15 +12,17 @@ import {
   type JobType,
 } from "@app/shared";
 
+const log = createLogger("api");
+
 const PORT = Number(process.env.PORT ?? 3000);
 
 const queue = new Queue<JobData, JobResult>(QUEUE_NAME, {
   connection: redisConnection(),
 });
-queue.on("error", (err) => console.error("queue error", err.message));
+queue.on("error", (err) => log.error({ err: err.message }, "queue error"));
 
 const redis = new Redis(redisConnection());
-redis.on("error", (err) => console.error("redis error", err.message));
+redis.on("error", (err) => log.error({ err: err.message }, "redis error"));
 
 function pickJobType(): JobType {
   const r = Math.random();
@@ -68,7 +70,7 @@ app.get("/status/:id", async (req, res) => {
 
 app.get("/health", (_req, res) => res.send("ok"));
 
-const server = app.listen(PORT, () => console.log(`api on :${PORT}`));
+const server = app.listen(PORT, () => log.info(`api on :${PORT}`));
 
 process.on("SIGTERM", async () => {
   server.close();

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export { createLogger } from "./logger";
+
 export const QUEUE_NAME = "jobs";
 
 export const redisConnection = () => {
