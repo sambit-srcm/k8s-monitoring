@@ -24,6 +24,22 @@ client -- :80 --> Ingress --> api (ClusterIP)
 - pnpm
 - ApacheBench (`ab`)
 
+## Local development
+
+Install dependencies, copy the env file, and start Redis. The API and worker read `../.env` through their `dev` scripts.
+
+```bash
+pnpm install
+cp .env.example .env
+docker compose up redis
+pnpm dev:api
+pnpm dev:worker
+```
+
+## Docker Compose
+
+`docker compose up` builds and starts Redis, the API, the worker, and stats. Host ports are Redis `6379`, API `3000`, worker metrics `9100`, and stats `3100`.
+
 ## Deploy
 
 Create the cluster named `queue`. Port 80 and 443 are published for ingress-nginx. Port 30080 is published on `127.0.0.1` for Grafana.
@@ -183,3 +199,17 @@ A `FailedGetScale ... Unauthorized` line appears 13 times in those events.
 - Linked files: [results/results-ab.txt](results/results-ab.txt), [results/results-hpa-describe.txt](results/results-hpa-describe.txt), [results/results-hpa-watch.txt](results/results-hpa-watch.txt).
 
 <!-- TODO(me): confirm the running API replica count during this run, and whether the queue_length panel also showed the backlog drain -->
+
+## Troubleshooting
+
+- The HPA `TARGETS` column shows `<unknown>` until metrics-server is installed. Run `./scripts/install-metrics-server.sh`.
+- A ServiceMonitor is not scraped when Prometheus only selects monitors in the Helm release namespace. `monitoring/values.yaml` sets `serviceMonitorSelectorNilUsesHelmValues: false`, and the monitors set `namespaceSelector` to `queue-system`.
+- `ab` prints `Send request failed` when the URL uses `localhost` (IPv6). Use `127.0.0.1`.
+- `helm install` fails when the Colima or Docker VM does not have enough memory. Give it at least 5 GiB.
+- A rebuilt image is not what the pods run when the tag is still `:latest` and `imagePullPolicy` is `IfNotPresent`. Load the image into kind again and run `kubectl rollout restart`.
+
+## Cleanup
+
+```bash
+kind delete cluster --name queue
+```
