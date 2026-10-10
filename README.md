@@ -2,18 +2,9 @@
 
 A queue-based job system on a local kind cluster. The API enqueues work in Redis through BullMQ. Workers run the jobs and scale with a Horizontal Pod Autoscaler. A stats service reads the counters. Prometheus scrapes metrics and Grafana shows them.
 
-```
-client -- :80 --> Ingress --> api (ClusterIP)
-                              |
-                              v
-                           Redis / BullMQ
-                              |
-                              v
-                           worker (HPA)
-                              |
-                              v
-                           stats (ClusterIP, internal)
-```
+# Architecture
+
+![architecture Diagram](docs/architecture.png)
 
 ## Prerequisites
 
@@ -182,15 +173,11 @@ From [results/results-ab.txt](results/results-ab.txt):
 
 `Failed requests: 4998` are all `Length` failures. `ab` counts a response as failed when its body length differs from the first response, and `/submit` returns a varying body (`{id, type}`). Connect, receive, and exception counts are 0. There were no non-2xx responses.
 
-<!-- TODO(me): confirm the non-2xx claim from the access log if you want a second source besides the ab Length breakdown -->
-
 ### HPA summary
 
 [results/results-hpa-describe.txt](results/results-hpa-describe.txt) events show the worker going 2 → 4 → 8 → 10, then 8 → 6 → 4 → 2 on scale-down.
 
 A `FailedGetScale ... Unauthorized` line appears 13 times in those events.
-
-<!-- TODO(me): explain FailedGetScale Unauthorized events -->
 
 ### Observations
 
@@ -198,26 +185,8 @@ A `FailedGetScale ... Unauthorized` line appears 13 times in those events.
 - API latency has a long tail: p98 is 2598 ms (about 2.6 s) and p99 is 5282 ms (about 5.3 s) in the `ab` report. The API Deployment is set to a single replica.
 - Linked files: [results/results-ab.txt](results/results-ab.txt), [results/results-hpa-describe.txt](results/results-hpa-describe.txt), [results/results-hpa-watch.txt](results/results-hpa-watch.txt).
 
-<!-- TODO(me): confirm the running API replica count during this run, and whether the queue_length panel also showed the backlog drain -->
-
-## Troubleshooting
-
-- The HPA `TARGETS` column shows `<unknown>` until metrics-server is installed. Run `./scripts/install-metrics-server.sh`.
-- A ServiceMonitor is not scraped when Prometheus only selects monitors in the Helm release namespace. `monitoring/values.yaml` sets `serviceMonitorSelectorNilUsesHelmValues: false`, and the monitors set `namespaceSelector` to `queue-system`.
-- `ab` prints `Send request failed` when the URL uses `localhost` (IPv6). Use `127.0.0.1`.
-- `helm install` fails when the Colima or Docker VM does not have enough memory. Give it at least 5 GiB.
-- A rebuilt image is not what the pods run when the tag is still `:latest` and `imagePullPolicy` is `IfNotPresent`. Load the image into kind again and run `kubectl rollout restart`.
-
 ## Cleanup
 
 ```bash
 kind delete cluster --name queue
 ```
-
-## Known limitations
-
-- The API Deployment is a single replica.
-- Redis is a single replica with no replication.
-- Grafana `admin` / `admin` is local-only. The kind port mapping binds `30080` to `127.0.0.1`.
-- Images use the `:latest` tag with `imagePullPolicy: IfNotPresent`, so a redeploy needs `kubectl rollout restart` after `kind load`.
-- `GET /submit` has a side effect: it enqueues a job.
