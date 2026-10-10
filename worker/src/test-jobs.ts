@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- console calls move to the shared logger in the next change */
 import { primesUpTo, sortRandomInts, hashPassword, holdMemory } from "./jobs";
 
 (async () => {

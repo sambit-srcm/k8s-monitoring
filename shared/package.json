@@ -12,6 +12,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
     "dev": "tsc -w"
   },
   "dependencies": {

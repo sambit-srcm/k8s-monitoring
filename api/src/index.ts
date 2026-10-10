@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- console calls move to the shared logger in the next change */
 import express, { type Request, type Response } from "express";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";

@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- console calls move to the shared logger in the next change */
 import type { Job } from "bullmq";
 import { Redis } from "ioredis";
 import { STATS_KEYS, redisConnection, type JobData, type JobResult } from "@app/shared";

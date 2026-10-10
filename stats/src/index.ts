@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- console calls move to the shared logger in the next change */
 import { QUEUE_NAME, STATS_KEYS, redisConnection, type JobData, type JobResult } from "@app/shared";
 import { Queue } from "bullmq";
 import express from "express";

@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- console calls move to the shared logger in the next change */
 import http from "node:http";
 import { registry } from "./metrics";
 
