@@ -95,13 +95,13 @@ ulimit -n 10240
 ab -k -n 5000 -c 200 http://127.0.0.1/submit
 ```
 
-The same load with an explicit JSON body:
+POST with a JSON body also enqueues a job. An empty object lets the API choose the type:
 
 ```bash
-ab -k -n 5000 -c 200 -p loadtest/body.json -T application/json http://127.0.0.1/submit
+curl -X POST http://127.0.0.1/submit -H 'content-type: application/json' -d '{}'
 ```
 
-`loadtest/body.json` is `{}`, so the API chooses the job type. Use `127.0.0.1`, not `localhost`.
+Use `127.0.0.1`, not `localhost`.
 
 ## Design notes
 
