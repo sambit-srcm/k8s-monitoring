@@ -213,3 +213,11 @@ A `FailedGetScale ... Unauthorized` line appears 13 times in those events.
 ```bash
 kind delete cluster --name queue
 ```
+
+## Known limitations
+
+- The API Deployment is a single replica.
+- Redis is a single replica with no replication.
+- Grafana `admin` / `admin` is local-only. The kind port mapping binds `30080` to `127.0.0.1`.
+- Images use the `:latest` tag with `imagePullPolicy: IfNotPresent`, so a redeploy needs `kubectl rollout restart` after `kind load`.
+- `GET /submit` has a side effect: it enqueues a job.
