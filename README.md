@@ -190,3 +190,7 @@ A `FailedGetScale ... Unauthorized` line appears 13 times in those events.
 ```bash
 kind delete cluster --name queue
 ```
+
+## Contributing
+
+Use a branch named `feat/`, `fix/`, `chore/`, or `docs/`, and write [Conventional Commits](https://www.conventionalcommits.org/). Rebase onto `development` before merging.
