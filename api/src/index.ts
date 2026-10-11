@@ -25,6 +25,33 @@ const app = createApp({ queue, redis });
 
 const server = app.listen(PORT, () => log.info(`api on :${PORT}`));
 
+let closing = false;
+
+function shutdown(exitCode: number): void {
+  if (closing) return;
+  closing = true;
+  const timer = setTimeout(() => process.exit(exitCode), 10_000);
+  timer.unref();
+  server.close(() => {
+    void (async () => {
+      await queue.close();
+      redis.disconnect();
+      clearTimeout(timer);
+      process.exit(exitCode);
+    })();
+  });
+}
+
+process.on("unhandledRejection", (err) => {
+  log.error({ err }, "unhandledRejection");
+  shutdown(1);
+});
+
+process.on("uncaughtException", (err) => {
+  log.error({ err }, "uncaughtException");
+  shutdown(1);
+});
+
 process.on("SIGTERM", async () => {
   server.close();
   await queue.close();
