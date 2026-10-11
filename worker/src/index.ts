@@ -50,10 +50,6 @@ process.on("uncaughtException", (err) => {
   shutdown(1);
 });
 
-// On SIGTERM, finish the job in progress before exiting (scale-down safe).
-process.on("SIGTERM", async () => {
-  await worker.close();
-  server.close();
-  closeStats();
-  process.exit(0);
-});
+// Finish the job in progress before exiting (scale-down safe).
+process.on("SIGTERM", () => shutdown(0));
+process.on("SIGINT", () => shutdown(0));

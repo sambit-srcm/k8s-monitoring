@@ -62,14 +62,5 @@ process.on("uncaughtException", (err) => {
   shutdown(1);
 });
 
-process.on("SIGTERM", async () => {
-  await new Promise<void>((resolve) => {
-    server.close(() => resolve());
-  });
-  await queue.close().catch((err: unknown) => {
-    const message = err instanceof Error ? err.message : "queue close failed";
-    log.error({ err: message }, "queue close failed");
-  });
-  redis.disconnect();
-  process.exit(0);
-});
+process.on("SIGTERM", () => shutdown(0));
+process.on("SIGINT", () => shutdown(0));

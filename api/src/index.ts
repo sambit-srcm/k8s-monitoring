@@ -52,9 +52,5 @@ process.on("uncaughtException", (err) => {
   shutdown(1);
 });
 
-process.on("SIGTERM", async () => {
-  server.close();
-  await queue.close();
-  redis.disconnect();
-  process.exit(0);
-});
+process.on("SIGTERM", () => shutdown(0));
+process.on("SIGINT", () => shutdown(0));
