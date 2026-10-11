@@ -17,7 +17,7 @@ A queue-based job system on a local kind cluster. The API enqueues work in Redis
 
 ## Local development
 
-Install dependencies, copy the env file, and start Redis. The API and worker read `../.env` through their `dev` scripts.
+Install dependencies, copy the env file, and start Redis. The API and worker read `../.env` through their `dev` scripts. `.env.example` lists `REDIS_HOST`, `REDIS_PORT`, `PORT`, `METRICS_PORT`, and `LOG_LEVEL`. `.env` stays gitignored.
 
 ```bash
 pnpm install
