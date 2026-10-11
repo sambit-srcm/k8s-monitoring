@@ -61,6 +61,20 @@ describe("api routes", () => {
     expect(response.status).toBe(404);
   });
 
+  it("hides internal errors", async () => {
+    const queue: SubmitQueue = {
+      add: vi.fn(async () => {
+        throw new Error("secret-detail");
+      }),
+      getJob: vi.fn(async () => undefined),
+    };
+    const redis: SubmitCounter = { incr: vi.fn(async () => 1) };
+    const response = await request(createApp({ queue, redis })).post("/submit").send({});
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: "internal_error" });
+    expect(JSON.stringify(response.body)).not.toContain("secret-detail");
+  });
+
   it("returns 200 from /health", async () => {
     const { app } = deps();
     const response = await request(app).get("/health");

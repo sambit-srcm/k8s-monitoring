@@ -1,6 +1,8 @@
-import express, { type Request, type Response } from "express";
-import { STATS_KEYS, JobPayloadSchema, type JobData } from "@app/shared";
+import express, { type NextFunction, type Request, type Response } from "express";
+import { STATS_KEYS, JobPayloadSchema, createLogger, type JobData } from "@app/shared";
 import { pickJobType } from "./jobType";
+
+const log = createLogger("api");
 
 export type SubmitJob = {
   id?: string;
@@ -65,5 +67,26 @@ export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): e
 
   app.get("/health", (_req, res) => res.send("ok"));
 
+  app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+    if (res.headersSent) {
+      next(err);
+      return;
+    }
+    const status = clientStatus(err);
+    if (status !== undefined) {
+      res.status(status).json({ error: "bad_request" });
+      return;
+    }
+    log.error({ err }, "request failed");
+    res.status(500).json({ error: "internal_error" });
+  });
+
   return app;
+}
+
+function clientStatus(err: unknown): number | undefined {
+  if (typeof err !== "object" || err === null || !("status" in err)) return undefined;
+  const status = err.status;
+  if (typeof status !== "number" || status < 400 || status >= 500) return undefined;
+  return status;
 }
