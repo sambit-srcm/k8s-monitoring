@@ -3,6 +3,7 @@ import { STATS_KEYS, JobPayloadSchema, createLogger, type JobData } from "@app/s
 import { pickJobType } from "./jobType";
 
 const log = createLogger("api");
+const JOB_ID = /^[A-Za-z0-9:_-]{1,64}$/;
 
 export type SubmitJob = {
   id?: string;
@@ -55,7 +56,12 @@ export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): e
   app.get("/submit", submitHandler);
 
   app.get("/status/:id", async (req, res) => {
-    const job = await queue.getJob(req.params.id);
+    const rawId = req.params.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+    if (id === undefined || !JOB_ID.test(id)) {
+      return res.status(400).json({ error: "invalid_id" });
+    }
+    const job = await queue.getJob(id);
     if (!job) return res.sendStatus(404);
     res.json({
       id: job.id,
