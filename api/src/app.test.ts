@@ -9,6 +9,7 @@ function deps(job?: SubmitJob) {
   };
   const redis: SubmitCounter = {
     incr: vi.fn(async () => 1),
+    ping: vi.fn(async () => "PONG"),
   };
   return { queue, redis, app: createApp({ queue, redis }) };
 }
@@ -87,7 +88,10 @@ describe("api routes", () => {
       }),
       getJob: vi.fn(async () => undefined),
     };
-    const redis: SubmitCounter = { incr: vi.fn(async () => 1) };
+    const redis: SubmitCounter = {
+      incr: vi.fn(async () => 1),
+      ping: vi.fn(async () => "PONG"),
+    };
     const response = await request(createApp({ queue, redis })).post("/submit").send({});
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ error: "internal_error" });
@@ -95,9 +99,27 @@ describe("api routes", () => {
   });
 
   it("returns 200 from /health", async () => {
-    const { app } = deps();
+    const { app, redis } = deps();
     const response = await request(app).get("/health");
     expect(response.status).toBe(200);
     expect(response.text).toBe("ok");
+    expect(redis.ping).not.toHaveBeenCalled();
+  });
+
+  it("reports ready when redis answers", async () => {
+    const { app } = deps();
+    const response = await request(app).get("/ready");
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: "ready" });
+  });
+
+  it("reports not ready when redis ping fails", async () => {
+    const { app, redis } = deps();
+    redis.ping = vi.fn(async () => {
+      throw new Error("down");
+    });
+    const response = await request(app).get("/ready");
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ status: "not_ready" });
   });
 });

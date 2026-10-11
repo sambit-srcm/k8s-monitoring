@@ -14,6 +14,7 @@ const log = createLogger("stats");
 
 export type StatsRedis = {
   mget: (...keys: string[]) => Promise<Array<string | null>>;
+  ping: () => Promise<unknown>;
 };
 
 export type StatsQueue = {
@@ -31,6 +32,23 @@ type Snapshot = {
   active: number;
   avgProcessingSeconds: number;
 };
+
+async function pingWithin(ping: () => Promise<unknown>, timeoutMs: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      ping(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+      }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
 
 export function toNumber(value: string | null): number {
   const parsed = Number(value ?? 0);
@@ -62,6 +80,14 @@ export function createStatsApp(deps: { redis: StatsRedis; queue: StatsQueue }): 
 
   app.get("/health", (_req, res) => {
     res.send("ok");
+  });
+
+  app.get("/ready", async (_req, res) => {
+    if (await pingWithin(redis.ping.bind(redis), 2000)) {
+      res.status(200).json({ status: "ready" });
+      return;
+    }
+    res.status(503).json({ status: "not_ready" });
   });
 
   app.get("/stats", async (_req, res) => {

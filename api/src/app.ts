@@ -27,6 +27,7 @@ export type SubmitQueue = {
 
 export type SubmitCounter = {
   incr: (key: string) => Promise<unknown>;
+  ping: () => Promise<unknown>;
 };
 
 export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): express.Express {
@@ -75,6 +76,14 @@ export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): e
 
   app.get("/health", (_req, res) => res.send("ok"));
 
+  app.get("/ready", async (_req, res) => {
+    if (await pingWithin(redis.ping.bind(redis), 2000)) {
+      res.status(200).json({ status: "ready" });
+      return;
+    }
+    res.status(503).json({ status: "not_ready" });
+  });
+
   app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
       next(err);
@@ -90,6 +99,23 @@ export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): e
   });
 
   return app;
+}
+
+async function pingWithin(ping: () => Promise<unknown>, timeoutMs: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      ping(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+      }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }
 
 function clientStatus(err: unknown): number | undefined {
