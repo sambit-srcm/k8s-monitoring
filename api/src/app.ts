@@ -1,4 +1,5 @@
 import express, { type NextFunction, type Request, type Response } from "express";
+import helmet from "helmet";
 import { STATS_KEYS, JobPayloadSchema, createLogger, type JobData } from "@app/shared";
 import { pickJobType } from "./jobType";
 
@@ -31,7 +32,8 @@ export type SubmitCounter = {
 export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): express.Express {
   const { queue, redis } = deps;
   const app = express();
-  app.use(express.json());
+  app.use(helmet());
+  app.use(express.json({ limit: "10kb" }));
 
   const submitHandler = async (req: Request, res: Response) => {
     const parsed = JobPayloadSchema.safeParse(req.body ?? {});
