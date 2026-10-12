@@ -1,5 +1,4 @@
 # Optional. Not applied by the default deploy steps.
-# A NetworkPolicy only takes effect when the cluster CNI enforces it.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
