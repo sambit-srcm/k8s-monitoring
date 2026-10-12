@@ -1,6 +1,10 @@
-import express, { type Request, type Response } from "express";
-import { STATS_KEYS, JobPayloadSchema, type JobData } from "@app/shared";
+import express, { type NextFunction, type Request, type Response } from "express";
+import helmet from "helmet";
+import { STATS_KEYS, JobPayloadSchema, createLogger, type JobData } from "@app/shared";
 import { pickJobType } from "./jobType";
+
+const log = createLogger("api");
+const JOB_ID = /^[A-Za-z0-9:_-]{1,64}$/;
 
 export type SubmitJob = {
   id?: string;
@@ -23,12 +27,14 @@ export type SubmitQueue = {
 
 export type SubmitCounter = {
   incr: (key: string) => Promise<unknown>;
+  ping: () => Promise<unknown>;
 };
 
 export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): express.Express {
   const { queue, redis } = deps;
   const app = express();
-  app.use(express.json());
+  app.use(helmet());
+  app.use(express.json({ limit: "10kb" }));
 
   const submitHandler = async (req: Request, res: Response) => {
     const parsed = JobPayloadSchema.safeParse(req.body ?? {});
@@ -53,7 +59,12 @@ export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): e
   app.get("/submit", submitHandler);
 
   app.get("/status/:id", async (req, res) => {
-    const job = await queue.getJob(req.params.id);
+    const rawId = req.params.id;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
+    if (id === undefined || !JOB_ID.test(id)) {
+      return res.status(400).json({ error: "invalid_id" });
+    }
+    const job = await queue.getJob(id);
     if (!job) return res.sendStatus(404);
     res.json({
       id: job.id,
@@ -65,5 +76,51 @@ export function createApp(deps: { queue: SubmitQueue; redis: SubmitCounter }): e
 
   app.get("/health", (_req, res) => res.send("ok"));
 
+  app.get("/ready", async (_req, res) => {
+    if (await pingWithin(redis.ping.bind(redis), 2000)) {
+      res.status(200).json({ status: "ready" });
+      return;
+    }
+    res.status(503).json({ status: "not_ready" });
+  });
+
+  app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+    if (res.headersSent) {
+      next(err);
+      return;
+    }
+    const status = clientStatus(err);
+    if (status !== undefined) {
+      res.status(status).json({ error: "bad_request" });
+      return;
+    }
+    log.error({ err }, "request failed");
+    res.status(500).json({ error: "internal_error" });
+  });
+
   return app;
+}
+
+async function pingWithin(ping: () => Promise<unknown>, timeoutMs: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      ping(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+      }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+function clientStatus(err: unknown): number | undefined {
+  if (typeof err !== "object" || err === null || !("status" in err)) return undefined;
+  const status = err.status;
+  if (typeof status !== "number" || status < 400 || status >= 500) return undefined;
+  return status;
 }

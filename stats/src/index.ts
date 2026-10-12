@@ -32,14 +32,35 @@ const app = createStatsApp({
 
 const server = app.listen(PORT, () => log.info(`stats on :${PORT}`));
 
-process.on("SIGTERM", async () => {
-  await new Promise<void>((resolve) => {
-    server.close(() => resolve());
+let closing = false;
+
+function shutdown(exitCode: number): void {
+  if (closing) return;
+  closing = true;
+  const timer = setTimeout(() => process.exit(exitCode), 10_000);
+  timer.unref();
+  server.close(() => {
+    void (async () => {
+      await queue.close().catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : "queue close failed";
+        log.error({ err: message }, "queue close failed");
+      });
+      redis.disconnect();
+      clearTimeout(timer);
+      process.exit(exitCode);
+    })();
   });
-  await queue.close().catch((err: unknown) => {
-    const message = err instanceof Error ? err.message : "queue close failed";
-    log.error({ err: message }, "queue close failed");
-  });
-  redis.disconnect();
-  process.exit(0);
+}
+
+process.on("unhandledRejection", (err) => {
+  log.error({ err }, "unhandledRejection");
+  shutdown(1);
 });
+
+process.on("uncaughtException", (err) => {
+  log.error({ err }, "uncaughtException");
+  shutdown(1);
+});
+
+process.on("SIGTERM", () => shutdown(0));
+process.on("SIGINT", () => shutdown(0));

@@ -11,11 +11,27 @@ describe("toNumber", () => {
 });
 
 describe("stats routes", () => {
+  it("returns ok from health and ready when redis answers", async () => {
+    const redis: StatsRedis = {
+      mget: vi.fn(async () => ["0", "0", "0", "0"]),
+      ping: vi.fn(async () => "PONG"),
+    };
+    const queue: StatsQueue = {
+      getJobCounts: vi.fn(async () => ({ waiting: 0, active: 0 })),
+    };
+    const app = createStatsApp({ redis, queue });
+    expect((await request(app).get("/health")).text).toBe("ok");
+    const ready = await request(app).get("/ready");
+    expect(ready.status).toBe(200);
+    expect(ready.body).toEqual({ status: "ready" });
+  });
+
   it("returns 503 redis_unavailable when redis fails", async () => {
     const redis: StatsRedis = {
       mget: vi.fn(async () => {
         throw new Error("down");
       }),
+      ping: vi.fn(async () => "PONG"),
     };
     const queue: StatsQueue = {
       getJobCounts: vi.fn(async () => ({ waiting: 0, active: 0 })),
@@ -28,6 +44,7 @@ describe("stats routes", () => {
   it("serves metrics from the snapshot", async () => {
     const redis: StatsRedis = {
       mget: vi.fn(async () => ["1", "1", "0", "2"]),
+      ping: vi.fn(async () => "PONG"),
     };
     const queue: StatsQueue = {
       getJobCounts: vi.fn(async () => ({ waiting: 0, active: 0 })),
@@ -42,6 +59,7 @@ describe("stats routes", () => {
       mget: vi.fn(async () => {
         throw new Error("down");
       }),
+      ping: vi.fn(async () => "PONG"),
     };
     const queue: StatsQueue = {
       getJobCounts: vi.fn(async () => ({ waiting: 0, active: 0 })),
@@ -51,9 +69,25 @@ describe("stats routes", () => {
     expect(response.text).toBe("");
   });
 
+  it("reports not ready when redis ping fails", async () => {
+    const redis: StatsRedis = {
+      mget: vi.fn(async () => ["0", "0", "0", "0"]),
+      ping: vi.fn(async () => {
+        throw new Error("down");
+      }),
+    };
+    const queue: StatsQueue = {
+      getJobCounts: vi.fn(async () => ({ waiting: 0, active: 0 })),
+    };
+    const response = await request(createStatsApp({ redis, queue })).get("/ready");
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ status: "not_ready" });
+  });
+
   it("maps stored counters through toNumber", async () => {
     const redis: StatsRedis = {
       mget: vi.fn(async () => ["4", "2", "nope", "6"]),
+      ping: vi.fn(async () => "PONG"),
     };
     const queue: StatsQueue = {
       getJobCounts: vi.fn(async () => ({ waiting: 3, active: 1 })),

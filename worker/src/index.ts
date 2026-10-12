@@ -24,10 +24,32 @@ worker.on("failed", (job, err) => log.info({ id: job?.id, err: err.message }, "f
 
 const server = startMetricsServer(METRICS_PORT);
 
-// On SIGTERM, finish the job in progress before exiting (scale-down safe).
-process.on("SIGTERM", async () => {
-  await worker.close();
-  server.close();
-  closeStats();
-  process.exit(0);
+let closing = false;
+
+function shutdown(exitCode: number): void {
+  if (closing) return;
+  closing = true;
+  const timer = setTimeout(() => process.exit(exitCode), 10_000);
+  timer.unref();
+  void worker.close().finally(() => {
+    server.close(() => {
+      closeStats();
+      clearTimeout(timer);
+      process.exit(exitCode);
+    });
+  });
+}
+
+process.on("unhandledRejection", (err) => {
+  log.error({ err }, "unhandledRejection");
+  shutdown(1);
 });
+
+process.on("uncaughtException", (err) => {
+  log.error({ err }, "uncaughtException");
+  shutdown(1);
+});
+
+// Finish the job in progress before exiting (scale-down safe).
+process.on("SIGTERM", () => shutdown(0));
+process.on("SIGINT", () => shutdown(0));

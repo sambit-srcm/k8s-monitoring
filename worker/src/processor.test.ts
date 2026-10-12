@@ -36,7 +36,7 @@ vi.mock("./jobs", () => ({
   run,
 }));
 
-import { processJob } from "./processor";
+import { closeStats, processJob } from "./processor";
 
 function job(): Job<JobData, JobResult> {
   return {
@@ -57,6 +57,11 @@ describe("processJob", () => {
     expect(metricMocks.observe).toHaveBeenCalledWith({ type: "primes" }, expect.any(Number));
     expect(redisMocks.incr).toHaveBeenCalledWith(STATS_KEYS.completed);
     expect(redisMocks.incrbyfloat).toHaveBeenCalledWith(STATS_KEYS.timeSum, expect.any(Number));
+  });
+
+  it("disconnects the stats client", () => {
+    closeStats();
+    expect(redisMocks.disconnect).toHaveBeenCalledOnce();
   });
 
   it("records a failure and rethrows", async () => {
