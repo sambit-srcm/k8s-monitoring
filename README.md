@@ -120,6 +120,8 @@ Redis is one StatefulSet replica with AOF (`appendonly`, `appendfsync everysec`)
 
 kind has no cloud load balancer. `extraPortMappings` in `kind-config.yaml` publish host ports into the node, and ingress-nginx binds host ports 80 and 443. The API Service stays ClusterIP and is only reached through the Ingress.
 
+`k8s/optional/network-policy.yaml` is not part of the default deploy steps. It limits Redis to the api, worker, and stats pods, allows ingress-nginx to reach the API, and allows the `monitoring` namespace to scrape worker port 9100 and stats port 3100. It does nothing unless the cluster CNI enforces NetworkPolicy.
+
 `GET /submit` has the same side effect as POST. That is only so `ab` can hit a URL with no body.
 
 ## Results and observations
