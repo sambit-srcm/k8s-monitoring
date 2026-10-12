@@ -33,6 +33,8 @@ spec:
             - "yes"
             - --appendfsync
             - everysec
+            - --maxmemory
+            - 400mb
             - --maxmemory-policy
             - noeviction
           ports:
@@ -42,6 +44,9 @@ spec:
             limits: { memory: 512Mi }
           readinessProbe:
             tcpSocket: { port: 6379 }
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
           volumeMounts:
             - name: data
               mountPath: /data
