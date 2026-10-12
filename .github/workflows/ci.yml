@@ -32,12 +32,14 @@ jobs:
       - name: Format
         run: pnpm exec prettier --check .
 
+      - name: Lint
+        run: pnpm lint
+
       - name: Typecheck
         run: pnpm typecheck
 
-      # Disabled until we have tests in place
-      # - name: Test
-      #   run: pnpm test
+      - name: Test
+        run: pnpm test:coverage
 
       - name: Build
         run: pnpm build

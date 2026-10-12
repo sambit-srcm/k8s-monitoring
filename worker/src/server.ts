@@ -1,5 +1,8 @@
 import http from "node:http";
+import { createLogger } from "@app/shared";
 import { registry } from "./metrics";
+
+const log = createLogger("worker");
 
 export function startMetricsServer(port: number): http.Server {
   const server = http.createServer(async (req, res) => {
@@ -13,6 +16,6 @@ export function startMetricsServer(port: number): http.Server {
       res.end();
     }
   });
-  server.listen(port, () => console.log(`worker metrics on :${port}`));
+  server.listen(port, () => log.info(`worker metrics on :${port}`));
   return server;
 }

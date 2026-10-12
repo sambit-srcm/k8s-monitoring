@@ -1,11 +1,19 @@
 import type { Job } from "bullmq";
 import { Redis } from "ioredis";
-import { STATS_KEYS, redisConnection, type JobData, type JobResult } from "@app/shared";
+import {
+  STATS_KEYS,
+  createLogger,
+  redisConnection,
+  type JobData,
+  type JobResult,
+} from "@app/shared";
 import { run } from "./jobs";
 import { jobsProcessed, jobErrors, jobDuration } from "./metrics";
 
+const log = createLogger("worker");
+
 const stats = new Redis(redisConnection());
-stats.on("error", (err) => console.error("redis error", err.message));
+stats.on("error", (err) => log.error({ err: err.message }, "redis error"));
 
 export async function processJob(job: Job<JobData, JobResult>): Promise<JobResult> {
   const { type } = job.data;

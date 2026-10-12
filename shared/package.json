@@ -12,9 +12,12 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
     "dev": "tsc -w"
   },
   "dependencies": {
+    "pino": "^10.4.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
