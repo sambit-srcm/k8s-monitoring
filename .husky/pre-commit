@@ -1,1 +1,6 @@
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged
+else
+  echo "warning: gitleaks is not installed, skipping secret scan"
+fi
 pnpm lint-staged
