@@ -24,9 +24,16 @@ spec:
     metadata:
       labels: { app: redis }
     spec:
+      # redis:7 runs as uid/gid 999. fsGroup keeps the data volume writable.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 999
       containers:
         - name: redis
           image: redis:7
+          securityContext:
+            allowPrivilegeEscalation: false
           args:
             - redis-server
             - --appendonly

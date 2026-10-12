@@ -13,16 +13,29 @@ spec:
       labels: { app: api }
     spec:
       enableServiceLinks: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
           image: queue-api:latest
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           envFrom:
             - configMapRef: { name: app-config }
           env:
             - { name: PORT, value: "3000" }
           ports:
             - containerPort: 3000
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
 
           resources:
             requests: { cpu: 100m, memory: 128Mi }
@@ -34,6 +47,9 @@ spec:
             httpGet: { path: /health, port: 3000 }
             initialDelaySeconds: 10
             periodSeconds: 5
+      volumes:
+        - name: tmp
+          emptyDir: {}
 
 ---
 apiVersion: v1

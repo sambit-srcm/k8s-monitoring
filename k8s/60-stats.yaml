@@ -13,10 +13,20 @@ spec:
     spec:
       enableServiceLinks: false
       terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: stats
           image: queue-stats:latest
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           envFrom:
             - configMapRef: { name: app-config }
           env:
@@ -24,6 +34,9 @@ spec:
           ports:
             - name: metrics
               containerPort: 3100
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests: { cpu: 50m, memory: 64Mi }
             limits: { cpu: 200m, memory: 256Mi }
@@ -35,6 +48,9 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 6
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
