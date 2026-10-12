@@ -28,6 +28,13 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Format
+        run: pnpm exec prettier --check .
+
+      - name: Typecheck
+        run: pnpm typecheck
+
       # Disabled until we have tests in place
       # - name: Test
       #   run: pnpm test

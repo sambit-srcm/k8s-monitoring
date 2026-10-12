@@ -1,9 +1,22 @@
+# replicas must stay 1: no Redis replication is configured.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  namespace: queue-system
+spec:
+  clusterIP: None
+  selector: { app: redis }
+  ports:
+    - port: 6379
+---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: redis
   namespace: queue-system
 spec:
+  serviceName: redis-headless
   replicas: 1
   selector:
     matchLabels: { app: redis }
@@ -14,14 +27,32 @@ spec:
       containers:
         - name: redis
           image: redis:7
+          args:
+            - redis-server
+            - --appendonly
+            - "yes"
+            - --appendfsync
+            - everysec
+            - --maxmemory-policy
+            - noeviction
           ports:
             - containerPort: 6379
           resources:
             requests: { cpu: 100m, memory: 128Mi }
-            limits: { memory: 512Mi, cpu: 200m }
+            limits: { memory: 512Mi }
           readinessProbe:
             tcpSocket: { port: 6379 }
-
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
