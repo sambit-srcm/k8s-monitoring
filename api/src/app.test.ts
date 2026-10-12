@@ -40,44 +40,35 @@ describe("api routes", () => {
 
   it("returns the job status", async () => {
     const job: SubmitJob = {
-      id: "job-1",
+      id: "1",
       data: { type: "sort", megabytes: 100 },
       returnvalue: { type: "sort", summary: "done" },
       getState: async () => "completed",
     };
     const { app } = deps(job);
-    const response = await request(app).get("/status/job-1");
+    const response = await request(app).get("/status/1");
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      id: "job-1",
+      id: "1",
       type: "sort",
       state: "completed",
       result: { type: "sort", summary: "done" },
     });
   });
 
-  it("rejects a job id with spaces, and one longer than 64 characters", async () => {
-    const { app } = deps();
-    expect((await request(app).get("/status/bad id")).status).toBe(400);
-    expect((await request(app).get(`/status/${"a".repeat(65)}`)).status).toBe(400);
-  });
-
-  it("accepts a job id with the allowed characters", async () => {
-    const job: SubmitJob = {
-      id: "job:1_ok-2",
-      data: { type: "sort", megabytes: 100 },
-      returnvalue: null,
-      getState: async () => "waiting",
-    };
-    const { app } = deps(job);
-    const response = await request(app).get("/status/job:1_ok-2");
-    expect(response.status).toBe(200);
-    expect(response.body.id).toBe("job:1_ok-2");
+  it("rejects wait, meta, and non-numeric ids before they reach the queue", async () => {
+    const { app, queue } = deps();
+    for (const id of ["wait", "meta", "abc"]) {
+      const response = await request(app).get(`/status/${id}`);
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: "invalid_id" });
+    }
+    expect(queue.getJob).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the job is missing", async () => {
     const { app } = deps(undefined);
-    const response = await request(app).get("/status/missing");
+    const response = await request(app).get("/status/42");
     expect(response.status).toBe(404);
   });
 

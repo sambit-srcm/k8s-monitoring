@@ -4,7 +4,7 @@ import { STATS_KEYS, JobPayloadSchema, createLogger, type JobData } from "@app/s
 import { pickJobType } from "./jobType";
 
 const log = createLogger("api");
-const JOB_ID = /^[A-Za-z0-9:_-]{1,64}$/;
+const JOB_ID = /^\d{1,20}$/;
 
 export type SubmitJob = {
   id?: string;
