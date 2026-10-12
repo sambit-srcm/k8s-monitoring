@@ -1,5 +1,5 @@
 # ---------- build stage ----------
-FROM node:22-slim AS build
+FROM node:26-slim AS build
 ARG SERVICE
 # corepack enable installs the pnpm version pinned by packageManager
 RUN corepack enable
@@ -22,7 +22,7 @@ RUN pnpm --filter ${SERVICE}... build
 RUN pnpm --filter ${SERVICE} deploy --prod --legacy /out
 
 # ---------- runtime stage ----------
-FROM node:22-slim
+FROM node:26-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /out .
