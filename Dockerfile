@@ -1,6 +1,7 @@
 # ---------- build stage ----------
 FROM node:22-slim AS build
 ARG SERVICE
+# corepack enable installs the pnpm version pinned by packageManager
 RUN corepack enable
 WORKDIR /repo
 
@@ -15,7 +16,7 @@ COPY shared shared
 COPY api api
 COPY worker worker
 COPY stats stats
-RUN pnpm -r build
+RUN pnpm --filter ${SERVICE}... build
 
 # Self-contained folder: just this service's prod deps + built shared
 RUN pnpm --filter ${SERVICE} deploy --prod --legacy /out
