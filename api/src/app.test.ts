@@ -1,0 +1,148 @@
+import { describe, expect, it, vi } from "vitest";
+import request from "supertest";
+import { createApp, type SubmitJob, type SubmitQueue, type SubmitCounter } from "./app";
+
+function deps(job?: SubmitJob) {
+  const queue: SubmitQueue = {
+    add: vi.fn(async () => ({ id: "job-1" })),
+    getJob: vi.fn(async () => job),
+  };
+  const redis: SubmitCounter = {
+    incr: vi.fn(async () => 1),
+    ping: vi.fn(async () => "PONG"),
+  };
+  return { queue, redis, app: createApp({ queue, redis }) };
+}
+
+describe("api routes", () => {
+  it("POST /submit returns 202 with id and type", async () => {
+    const { app, queue, redis } = deps();
+    const response = await request(app).post("/submit").send({ type: "primes", megabytes: 10 });
+    expect(response.status).toBe(202);
+    expect(response.body).toEqual({ id: "job-1", type: "primes" });
+    expect(queue.add).toHaveBeenCalledOnce();
+    expect(redis.incr).toHaveBeenCalledOnce();
+  });
+
+  it("GET /submit returns 202 with id and type", async () => {
+    const { app } = deps();
+    const response = await request(app).get("/submit");
+    expect(response.status).toBe(202);
+    expect(response.body.id).toBe("job-1");
+    expect(["primes", "bcrypt", "sort", "memory"]).toContain(response.body.type);
+  });
+
+  it("returns 400 for an invalid payload", async () => {
+    const { app } = deps();
+    const response = await request(app).post("/submit").send({ type: "nope" });
+    expect(response.status).toBe(400);
+  });
+
+  it("returns the job status", async () => {
+    const job: SubmitJob = {
+      id: "1",
+      data: { type: "sort", megabytes: 100 },
+      returnvalue: { type: "sort", summary: "done" },
+      getState: async () => "completed",
+    };
+    const { app } = deps(job);
+    const response = await request(app).get("/status/1");
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      id: "1",
+      type: "sort",
+      state: "completed",
+      result: { type: "sort", summary: "done" },
+    });
+  });
+
+  it("rejects wait, meta, and non-numeric ids before they reach the queue", async () => {
+    const { app, queue } = deps();
+    for (const id of ["wait", "meta", "abc"]) {
+      const response = await request(app).get(`/status/${id}`);
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ error: "invalid_id" });
+    }
+    expect(queue.getJob).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the job is missing", async () => {
+    const { app } = deps(undefined);
+    const response = await request(app).get("/status/42");
+    expect(response.status).toBe(404);
+  });
+
+  it("returns 400 for a client error status", async () => {
+    const queue: SubmitQueue = {
+      add: vi.fn(async () => {
+        throw Object.assign(new Error("bad input"), { status: 400 });
+      }),
+      getJob: vi.fn(async () => undefined),
+    };
+    const redis: SubmitCounter = {
+      incr: vi.fn(async () => 1),
+      ping: vi.fn(async () => "PONG"),
+    };
+    const response = await request(createApp({ queue, redis })).post("/submit").send({});
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "bad_request" });
+  });
+
+  it("hides a non-client status code", async () => {
+    const queue: SubmitQueue = {
+      add: vi.fn(async () => {
+        throw Object.assign(new Error("nope"), { status: 500 });
+      }),
+      getJob: vi.fn(async () => undefined),
+    };
+    const redis: SubmitCounter = {
+      incr: vi.fn(async () => 1),
+      ping: vi.fn(async () => "PONG"),
+    };
+    const response = await request(createApp({ queue, redis })).post("/submit").send({});
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: "internal_error" });
+  });
+
+  it("hides internal errors", async () => {
+    const queue: SubmitQueue = {
+      add: vi.fn(async () => {
+        throw new Error("secret-detail");
+      }),
+      getJob: vi.fn(async () => undefined),
+    };
+    const redis: SubmitCounter = {
+      incr: vi.fn(async () => 1),
+      ping: vi.fn(async () => "PONG"),
+    };
+    const response = await request(createApp({ queue, redis })).post("/submit").send({});
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: "internal_error" });
+    expect(JSON.stringify(response.body)).not.toContain("secret-detail");
+  });
+
+  it("returns 200 from /health", async () => {
+    const { app, redis } = deps();
+    const response = await request(app).get("/health");
+    expect(response.status).toBe(200);
+    expect(response.text).toBe("ok");
+    expect(redis.ping).not.toHaveBeenCalled();
+  });
+
+  it("reports ready when redis answers", async () => {
+    const { app } = deps();
+    const response = await request(app).get("/ready");
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: "ready" });
+  });
+
+  it("reports not ready when redis ping fails", async () => {
+    const { app, redis } = deps();
+    redis.ping = vi.fn(async () => {
+      throw new Error("down");
+    });
+    const response = await request(app).get("/ready");
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({ status: "not_ready" });
+  });
+});

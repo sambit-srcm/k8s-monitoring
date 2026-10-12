@@ -1,6 +1,70 @@
 services:
   redis:
     image: redis:7
-    container_name: k8s_redis
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      args:
+        SERVICE: api
+    image: queue-api:latest
+    environment:
+      REDIS_HOST: redis
+      PORT: "3000"
+      REDIS_PORT: "6379"
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      args:
+        SERVICE: worker
+    image: queue-worker:latest
+    environment:
+      REDIS_HOST: redis
+      METRICS_PORT: "9100"
+      REDIS_PORT: "6379"
+    ports:
+      - "9100:9100"
+    cpus: 0.5
+    mem_limit: 512m
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  stats:
+    build:
+      context: .
+      args:
+        SERVICE: stats
+    image: queue-stats:latest
+    environment:
+      REDIS_HOST: redis
+      PORT: "3100"
+      REDIS_PORT: "6379"
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  redis-data:

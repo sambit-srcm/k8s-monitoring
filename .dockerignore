@@ -1,0 +1,14 @@
+.git
+.env
+.env.example
+.github
+.husky
+**/node_modules
+**/dist
+coverage
+k8s
+monitoring
+results
+scripts
+docs
+*.md

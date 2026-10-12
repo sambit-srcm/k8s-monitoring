@@ -1,0 +1,77 @@
+# replicas must stay 1: no Redis replication is configured.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-headless
+  namespace: queue-system
+spec:
+  clusterIP: None
+  selector: { app: redis }
+  ports:
+    - port: 6379
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: queue-system
+spec:
+  serviceName: redis-headless
+  replicas: 1
+  selector:
+    matchLabels: { app: redis }
+  template:
+    metadata:
+      labels: { app: redis }
+    spec:
+      # redis:7 runs as uid/gid 999. fsGroup keeps the data volume writable.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        fsGroup: 999
+      containers:
+        - name: redis
+          image: redis:7
+          securityContext:
+            allowPrivilegeEscalation: false
+          args:
+            - redis-server
+            - --appendonly
+            - "yes"
+            - --appendfsync
+            - everysec
+            - --maxmemory
+            - 400mb
+            - --maxmemory-policy
+            - noeviction
+          ports:
+            - containerPort: 6379
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          readinessProbe:
+            tcpSocket: { port: 6379 }
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: queue-system
+spec:
+  selector: { app: redis }
+  ports:
+    - port: 6379

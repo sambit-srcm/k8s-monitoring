@@ -1,0 +1,1 @@
+The JSON files here are the dashboards embedded in `monitoring/worker-dashboard.yaml` and `monitoring/stats-dashboard.yaml`. Import these in Grafana when the ConfigMaps are not loaded. If you change a panel, update the ConfigMap and the JSON together.

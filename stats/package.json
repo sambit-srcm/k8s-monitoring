@@ -1,0 +1,28 @@
+{
+  "name": "stats",
+  "version": "1.0.0",
+  "private": true,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsx watch --env-file=../.env src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.3.1"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "bullmq": "^6.3.11",
+    "express": "^5.2.1",
+    "ioredis": "^6.0.0",
+    "prom-client": "^15.1.3"
+  }
+}

@@ -1,0 +1,40 @@
+Name:                                                  worker
+Namespace:                                             queue-system
+Labels:                                                <none>
+Annotations:                                           <none>
+CreationTimestamp:                                     Thu, 08 Oct 2026 21:14:26 +0530
+Reference:                                             Deployment/worker
+Metrics:                                               ( current / target )
+  resource cpu on pods  (as a percentage of request):  9% (9m) / 70%
+Min replicas:                                          2
+Max replicas:                                          10
+Behavior:
+  Scale Up:
+    Stabilization Window: 0 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Percent  Value: 100  Period: 30 seconds
+  Scale Down:
+    Stabilization Window: 120 seconds
+    Select Policy: Max
+    Policies:
+      - Type: Pods  Value: 2  Period: 60 seconds
+Deployment pods:    2 current / 2 desired
+Conditions:
+  Type            Status  Reason            Message
+  ----            ------  ------            -------
+  AbleToScale     True    ReadyForNewScale  recommended size matches current size
+  ScaledToZero    False   NotScaledToZero   the HPA controller did not scale the workload to zero
+  ScalingActive   True    ValidMetricFound  the HPA was able to successfully calculate a replica count from cpu resource utilization (percentage of request)
+  ScalingLimited  True    TooFewReplicas    the desired replica count is less than the minimum replica count
+Events:
+  Type     Reason             Age                 From                       Message
+  ----     ------             ----                ----                       -------
+  Warning  FailedGetScale     33m (x13 over 19h)  horizontal-pod-autoscaler  Unauthorized
+  Normal   SuccessfulRescale  23m (x3 over 21h)   horizontal-pod-autoscaler  New size: 4; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale  22m (x2 over 21h)   horizontal-pod-autoscaler  New size: 8; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale  22m (x3 over 21h)   horizontal-pod-autoscaler  New size: 10; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale  16m (x3 over 21h)   horizontal-pod-autoscaler  New size: 8; reason: All metrics below target
+  Normal   SuccessfulRescale  15m (x3 over 21h)   horizontal-pod-autoscaler  New size: 6; reason: All metrics below target
+  Normal   SuccessfulRescale  14m (x3 over 21h)   horizontal-pod-autoscaler  New size: 4; reason: All metrics below target
+  Normal   SuccessfulRescale  13m (x3 over 21h)   horizontal-pod-autoscaler  New size: 2; reason: All metrics below target
