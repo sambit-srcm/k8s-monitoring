@@ -116,9 +116,11 @@ BullMQ stores the queue in Redis and lets the API process stay separate from the
 
 The worker HPA keeps at least 2 pods and at most 10. It targets 70% of the container CPU request (100m). Scale-up has no stabilization window and may double the replica count every 30 seconds. Scale-down waits 120 seconds and removes at most 2 pods per minute.
 
-Redis is one StatefulSet replica with AOF (`appendonly`, `appendfsync everysec`) and `noeviction`. Replication is not configured, so the replica count must stay 1. A headless Service backs the StatefulSet. The `redis` ClusterIP Service is what the apps use.
+Redis is one StatefulSet replica with AOF (`appendonly`, `appendfsync everysec`), `--maxmemory 400mb`, and `noeviction`. At the memory cap Redis returns errors instead of growing into the 512Mi limit and getting OOMKilled. Replication is not configured, so the replica count must stay 1. A headless Service backs the StatefulSet. The `redis` ClusterIP Service is what the apps use. A liveness probe runs `redis-cli ping`.
 
 kind has no cloud load balancer. `extraPortMappings` in `kind-config.yaml` publish host ports into the node, and ingress-nginx binds host ports 80 and 443. The API Service stays ClusterIP and is only reached through the Ingress.
+
+`k8s/optional/network-policy.yaml` is not part of the default deploy steps. It limits Redis to the api, worker, and stats pods, allows ingress-nginx to reach the API, and allows the `monitoring` namespace to scrape worker port 9100 and stats port 3100. It does nothing unless the cluster CNI enforces NetworkPolicy.
 
 `GET /submit` has the same side effect as POST. That is only so `ab` can hit a URL with no body.
 
