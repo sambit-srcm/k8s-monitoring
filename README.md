@@ -60,6 +60,7 @@ kubectl apply -f k8s/20-api.yaml
 kubectl apply -f k8s/30-worker.yaml
 kubectl apply -f k8s/40-ingress.yaml
 kubectl apply -f k8s/50-hpa.yaml
+kubectl apply -f k8s/55-worker-pdb.yaml
 kubectl apply -f k8s/60-stats.yaml
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
