@@ -81,6 +81,38 @@ describe("api routes", () => {
     expect(response.status).toBe(404);
   });
 
+  it("returns 400 for a client error status", async () => {
+    const queue: SubmitQueue = {
+      add: vi.fn(async () => {
+        throw Object.assign(new Error("bad input"), { status: 400 });
+      }),
+      getJob: vi.fn(async () => undefined),
+    };
+    const redis: SubmitCounter = {
+      incr: vi.fn(async () => 1),
+      ping: vi.fn(async () => "PONG"),
+    };
+    const response = await request(createApp({ queue, redis })).post("/submit").send({});
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "bad_request" });
+  });
+
+  it("hides a non-client status code", async () => {
+    const queue: SubmitQueue = {
+      add: vi.fn(async () => {
+        throw Object.assign(new Error("nope"), { status: 500 });
+      }),
+      getJob: vi.fn(async () => undefined),
+    };
+    const redis: SubmitCounter = {
+      incr: vi.fn(async () => 1),
+      ping: vi.fn(async () => "PONG"),
+    };
+    const response = await request(createApp({ queue, redis })).post("/submit").send({});
+    expect(response.status).toBe(500);
+    expect(response.body).toEqual({ error: "internal_error" });
+  });
+
   it("hides internal errors", async () => {
     const queue: SubmitQueue = {
       add: vi.fn(async () => {

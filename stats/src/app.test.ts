@@ -11,6 +11,21 @@ describe("toNumber", () => {
 });
 
 describe("stats routes", () => {
+  it("returns ok from health and ready when redis answers", async () => {
+    const redis: StatsRedis = {
+      mget: vi.fn(async () => ["0", "0", "0", "0"]),
+      ping: vi.fn(async () => "PONG"),
+    };
+    const queue: StatsQueue = {
+      getJobCounts: vi.fn(async () => ({ waiting: 0, active: 0 })),
+    };
+    const app = createStatsApp({ redis, queue });
+    expect((await request(app).get("/health")).text).toBe("ok");
+    const ready = await request(app).get("/ready");
+    expect(ready.status).toBe(200);
+    expect(ready.body).toEqual({ status: "ready" });
+  });
+
   it("returns 503 redis_unavailable when redis fails", async () => {
     const redis: StatsRedis = {
       mget: vi.fn(async () => {
